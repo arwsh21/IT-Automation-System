@@ -1,0 +1,194 @@
+
+<style>
+#erd svg { width: 100%; }
+#erd svg .label { font-family: "Anthropic Sans", sans-serif !important; }
+</style>
+<div id="erd" style="padding: 1rem 0;"></div>
+<script type="module">
+import mermaid from 'https://esm.sh/mermaid@11/dist/mermaid.esm.min.mjs';
+const dark = matchMedia('(prefers-color-scheme: dark)').matches;
+await document.fonts.ready;
+mermaid.initialize({
+  startOnLoad: false,
+  theme: 'base',
+  fontFamily: '"Anthropic Sans", sans-serif',
+  themeVariables: {
+    darkMode: dark,
+    fontSize: '13px',
+    fontFamily: '"Anthropic Sans", sans-serif',
+    lineColor: dark ? '#9c9a92' : '#73726c',
+    textColor: dark ? '#c2c0b6' : '#3d3d3a',
+    primaryColor: dark ? '#2e2c44' : '#EEEDFE',
+    primaryBorderColor: dark ? '#534AB7' : '#534AB7',
+    primaryTextColor: dark ? '#c2c0b6' : '#3d3d3a',
+    edgeLabelBackground: dark ? '#1a1a1a' : '#ffffff',
+    attributeBackgroundColorEven: dark ? '#1e1e1e' : '#f8f8f6',
+    attributeBackgroundColorOdd: dark ? '#262626' : '#ffffff',
+  },
+});
+
+const diagram = `erDiagram
+
+  ADMIN {
+    int admin_id PK
+    string name
+    string email
+    string password
+    string employee_no
+  }
+
+  IT_TECHNICIAN {
+    int tech_id PK
+    string name
+    string email
+    string password
+    string employee_no
+    string shift
+  }
+
+  STUDENT {
+    int student_id PK
+    string name
+    string email
+    string password
+    string batch
+    string department
+  }
+
+  LAB {
+    int lab_id PK
+    string lab_name
+    string location
+    int capacity
+    int lab_incharge_id FK
+  }
+
+  PC {
+    int pc_id PK
+    string pc_number
+    int lab_id FK
+    int assigned_to FK
+    int assigned_by FK
+    date assignment_start
+    date assignment_end
+    string status
+    date purchase_date
+    date last_serviced
+  }
+
+  SOFTWARE {
+    int software_id PK
+    string name
+    string version
+    string license_type
+    date license_expiry
+  }
+
+  INSTALLATION {
+    int installation_id PK
+    int pc_id FK
+    int software_id FK
+    int installed_by FK
+    date install_date
+    date last_updated
+    string install_status
+  }
+
+  TICKET {
+    int ticket_id PK
+    int raised_by FK
+    int assigned_to FK
+    int pc_id FK
+    string category
+    string description
+    string status
+    timestamp created_at
+    timestamp resolved_at
+  }
+
+  TICKET_LOG {
+    int log_id PK
+    int ticket_id FK
+    int updated_by FK
+    string old_status
+    string new_status
+    string note
+    timestamp updated_at
+  }
+
+  PC_LOG {
+    int log_id PK
+    int pc_id FK
+    int changed_by FK
+    string action
+    string field_changed
+    string old_value
+    string new_value
+    timestamp changed_at
+  }
+
+  SOFTWARE_LOG {
+    int log_id PK
+    int installation_id FK
+    int changed_by FK
+    int software_id FK
+    string action
+    string old_version
+    string new_version
+    timestamp changed_at
+  }
+
+  LOGIN_LOG {
+    int log_id PK
+    string email
+    string role
+    string ip_address
+    timestamp login_time
+  }
+
+  IT_TECHNICIAN ||--o{ LAB : "manages (1 to 0..*)"
+  LAB ||--o{ PC : "contains (1 to 1..*)"
+  STUDENT |o--o{ PC : "assigned to (0..1 to 0..*)"
+  IT_TECHNICIAN ||--o{ PC : "assigns (1 to 0..*)"
+  PC ||--o{ INSTALLATION : "has (1 to 0..*)"
+  SOFTWARE ||--o{ INSTALLATION : "installed via (1 to 0..*)"
+  IT_TECHNICIAN ||--o{ INSTALLATION : "installs (1 to 0..*)"
+  STUDENT ||--o{ TICKET : "raises (1 to 0..*)"
+  PC ||--o{ TICKET : "referenced in (1 to 0..*)"
+  IT_TECHNICIAN ||--o{ TICKET : "handles (1 to 0..*)"
+  TICKET ||--|{ TICKET_LOG : "tracked by (1 to 1..*)"
+  IT_TECHNICIAN ||--o{ TICKET_LOG : "updates (1 to 0..*)"
+  PC ||--|{ PC_LOG : "audited in (1 to 1..*)"
+  IT_TECHNICIAN ||--o{ PC_LOG : "records (1 to 0..*)"
+  INSTALLATION ||--|{ SOFTWARE_LOG : "audited in (1 to 1..*)"
+  IT_TECHNICIAN ||--o{ SOFTWARE_LOG : "logs (1 to 0..*)"
+  SOFTWARE ||--o{ SOFTWARE_LOG : "tracked in (1 to 0..*)"
+`;
+
+const { svg } = await mermaid.render('erd-svg', diagram);
+document.getElementById('erd').innerHTML = svg;
+
+document.querySelectorAll('#erd svg .node').forEach(node => {
+  const firstPath = node.querySelector('path[d]');
+  if (!firstPath) return;
+  const d = firstPath.getAttribute('d');
+  const nums = d.match(/-?[\d.]+/g)?.map(Number);
+  if (!nums || nums.length < 8) return;
+  const xs = [nums[0], nums[2], nums[4], nums[6]];
+  const ys = [nums[1], nums[3], nums[5], nums[7]];
+  const x = Math.min(...xs), y = Math.min(...ys);
+  const w = Math.max(...xs) - x, h = Math.max(...ys) - y;
+  const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+  rect.setAttribute('x', x); rect.setAttribute('y', y);
+  rect.setAttribute('width', w); rect.setAttribute('height', h);
+  rect.setAttribute('rx', '8');
+  for (const a of ['fill', 'stroke', 'stroke-width', 'class', 'style']) {
+    if (firstPath.hasAttribute(a)) rect.setAttribute(a, firstPath.getAttribute(a));
+  }
+  firstPath.replaceWith(rect);
+});
+
+document.querySelectorAll('#erd svg .row-rect-odd path, #erd svg .row-rect-even path').forEach(p => {
+  p.setAttribute('stroke', 'none');
+});
+</script>
